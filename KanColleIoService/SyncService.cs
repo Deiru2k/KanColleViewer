@@ -37,8 +37,35 @@ namespace KanColleIoService
         /// <param name="proxy">The proxy object</param>
         public void RegisterAPIMessages(KanColleProxy proxy)
         {
-            // Lambda will be called on selected API message
-            // proxy.api_xxx.TryParse<kcsapi_xxx>.Subscribe(x => ...);
+            // Called when player returns to main menu
+            proxy.api_port.TryParse<kcsapi_port>().Subscribe(data => Console.Beep());
+
+            // Called when ship drops (whole list of ships is sent)
+            proxy.api_get_member_ship2.TryParse<kcsapi_ship2[]>().Subscribe(data => Console.Beep());
+
+            // Called when ship equipment is changed / ship itself is remodelled
+            proxy.api_get_member_ship3.TryParse<kcsapi_ship3>().Subscribe(data => Console.Beep());
+
+            // Called when item list is initialized
+            proxy.api_get_member_slot_item.TryParse<kcsapi_slotitem[]>().Subscribe(data => Console.Beep());
+
+            // Called when fleet composition is changed
+            proxy.api_req_hensei_change.TryParse<kcsapi_change>().Subscribe(data => Console.Beep());
+
+            // Called when ship is modernized
+            proxy.api_req_kaisou_powerup.TryParse<kcsapi_powerup>().Subscribe(data => Console.Beep());
+
+            // Called when item is created
+            proxy.api_req_kousyou_createitem.TryParse<kcsapi_createitem>().Subscribe(data => Console.Beep());
+
+            // Called when item is scrapped
+            proxy.api_req_kousyou_destroyitem2.TryParse<kcsapi_destroyitem2>().Subscribe(data => Console.Beep());
+
+            // Called when ship is scrapped
+            proxy.api_req_kousyou_destroyship.TryParse<kcsapi_destroyship>().Subscribe(data => Console.Beep());
+
+            // Called when ship is constructed
+            proxy.api_req_kousyou_getship.TryParse<kcsapi_getship>().Subscribe(data => Console.Beep());
         }
     }
 }

@@ -631,10 +631,6 @@
       <Project>{0bc8cf79-76d9-46ad-867f-fec6c6ad4594}</Project>
       <Name>KanColleWrapper</Name>
     </ProjectReference>
-    <ProjectReference Include="..\KanColleIoService\KanColleIoService.csproj">
-      <Project>{ebbea38e-730e-4c85-afa4-7373d438668c}</Project>
-      <Name>KanColleIoService</Name>
-    </ProjectReference>
     <ProjectReference Include="..\MetroRadiance\MetroRadiance.Chrome\MetroRadiance.Chrome.csproj">
       <Project>{21b4ad15-d9fa-4873-bfad-1eeefbc6c264}</Project>
       <Name>MetroRadiance.Chrome</Name>

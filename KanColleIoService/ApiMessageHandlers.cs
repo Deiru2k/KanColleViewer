@@ -1,9 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Grabacr07.KanColleWrapper.Models;
 using Grabacr07.KanColleWrapper.Models.Raw;
 
 namespace KanColleIoService
@@ -15,6 +10,7 @@ namespace KanColleIoService
         /// </summary>
         public static void Port(Roster roster, kcsapi_port data)
         {
+            Ship2(roster, data.api_ship);
         }
 
         /// <summary>
@@ -22,6 +18,11 @@ namespace KanColleIoService
         /// </summary>
         public static void Ship2(Roster roster, kcsapi_ship2[] data)
         {
+            // To process means to try updating the existing ship, and if the ship isn't in
+            // list, to add it there.
+
+            foreach (kcsapi_ship2 ship in data)
+                roster.ProcessShip(ship);
         }
 
         /// <summary>
@@ -29,6 +30,7 @@ namespace KanColleIoService
         /// </summary>
         public static void Ship3(Roster roster, kcsapi_ship3 data)
         {
+            Ship2(roster, data.api_ship_data);
         }
 
         /// <summary>
@@ -57,6 +59,10 @@ namespace KanColleIoService
         /// </summary>
         public static void PowerUp(Roster roster, kcsapi_powerup data)
         {
+            if (data.api_powerup_flag == 1)
+            {
+                roster.UpdateShip(data.api_ship);
+            }
         }
 
         /// <summary>
@@ -75,6 +81,7 @@ namespace KanColleIoService
         /// </summary>
         public static void GetShip(Roster roster, kcsapi_getship data)
         {
+            roster.AddShip(data.api_ship);
         }
     }
 }

@@ -1,15 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
 using System.Web;
 using Fiddler;
 using Grabacr07.KanColleWrapper;
-using Grabacr07.KanColleWrapper.Models;
 using Grabacr07.KanColleWrapper.Models.Raw;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -23,11 +19,12 @@ namespace KanColleIoService
     {
         private static SyncService current;
 
-        private Roster roster = new Roster();
+        private Roster roster;
         private HttpClient httpClient = new HttpClient();
 
         private SyncService()
         {
+            roster = new Roster(this);
             httpClient.BaseAddress = new Uri(Properties.Settings.Default.ApiLink);
         }
 
@@ -81,8 +78,12 @@ namespace KanColleIoService
         {
             dynamic result = await APIRequest(HttpMethod.Post, "auth/login", new { username, password });
 
+            // Saving credentials for further authentication
             httpClient.DefaultRequestHeaders.Authorization = result.data["$oid"];
             UserName = username;
+
+            // Telling the roster to fill itself with ship data
+            roster.Initialize();
         }
 
         /// <summary>

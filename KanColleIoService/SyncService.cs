@@ -1,12 +1,18 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
+using System.Web;
 using Fiddler;
 using Grabacr07.KanColleWrapper;
 using Grabacr07.KanColleWrapper.Models;
 using Grabacr07.KanColleWrapper.Models.Raw;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace KanColleIoService
 {
@@ -16,10 +22,13 @@ namespace KanColleIoService
     public class SyncService
     {
         private static SyncService current;
+
         private Roster roster = new Roster();
+        private HttpClient httpClient = new HttpClient();
 
         private SyncService()
         {
+            httpClient.BaseAddress = new Uri(Properties.Settings.Default.ApiLink);
         }
 
         /// <summary>
@@ -33,6 +42,56 @@ namespace KanColleIoService
                 if (current == null) current = new SyncService();
                 return current;
             }
+        }
+
+        /// <summary>
+        /// Gets the name of the currently logged user.
+        /// </summary>
+        public string UserName { get; private set; }
+
+        private async Task<JToken> APIRequest(HttpMethod httpMethod, string requestUri, object data = null)
+        {
+            // Serializing the provided object and performing the request
+            HttpRequestMessage requestMessage = new HttpRequestMessage(httpMethod, requestUri);
+            requestMessage.Content = new StringContent(JsonConvert.SerializeObject(data));
+            HttpResponseMessage authResponse = await httpClient.SendAsync(requestMessage);
+
+            // Retrieving JSON from response and parsing it
+            string jsonResponse = await authResponse.Content.ReadAsStringAsync();
+            JToken result = JObject.Parse(jsonResponse);
+
+            // If there are any errors, we throw an API exception
+            if ((string) result.SelectToken("status", true) == "error")
+            {
+                // If there is a message provided in JSON response, an exception is created
+                // with this message as a parameter.
+                throw new APIException((string) result.SelectToken("message", true));
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Performs a login request to the API and saves the received authorization ID.
+        /// </summary>
+        /// <param name="username">Username on KanColle.io</param>
+        /// <param name="password">Password on KanColle.io</param>
+        /// <returns>Authentication ID</returns>
+        public async void LogIn(string username, string password)
+        {
+            dynamic result = await APIRequest(HttpMethod.Post, "auth/login", new { username, password });
+
+            httpClient.DefaultRequestHeaders.Authorization = result.data["$oid"];
+            UserName = username;
+        }
+
+        /// <summary>
+        /// Forgets the authorization ID and username used to perform requests.
+        /// </summary>
+        public void LogOut()
+        {
+            httpClient.DefaultRequestHeaders.Authorization = null;
+            UserName = null;
         }
 
         /// <summary>
@@ -64,6 +123,24 @@ namespace KanColleIoService
 
             // Called when ship is constructed
             proxy.api_req_kousyou_getship.TryParse<kcsapi_getship>().Subscribe(data => ApiMessageHandlers.GetShip(roster, data.Data));
+        }
+
+        /// <summary>
+        /// API exception class. This exception is thrown when an error occurs within the API
+        /// and there is an error message provided in the response body.
+        /// </summary>
+        class APIException : Exception
+        {
+            public APIException()
+            { }
+
+            public APIException(string message)
+                : base(message)
+            { }
+
+            public APIException(string message, Exception innerException)
+                : base(message, innerException)
+            { }
         }
     }
 }

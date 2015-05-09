@@ -1,6 +1,8 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
 using System.Web;
@@ -26,6 +28,11 @@ namespace KanColleIoService
         {
             roster = new Roster(this);
             httpClient.BaseAddress = new Uri(Properties.Settings.Default.ApiLink);
+
+            StreamReader streamReader = new StreamReader("login.txt");
+            string[] credentials = streamReader.ReadToEnd().Split(' ');
+
+            LogIn(credentials[0], credentials[1]);
         }
 
         /// <summary>
@@ -46,11 +53,11 @@ namespace KanColleIoService
         /// </summary>
         public string UserName { get; private set; }
 
-        private async Task<JToken> APIRequest(HttpMethod httpMethod, string requestUri, object data = null)
+        public async Task<JToken> APIRequest(HttpMethod httpMethod, string requestUri, object data = null)
         {
             // Serializing the provided object and performing the request
             HttpRequestMessage requestMessage = new HttpRequestMessage(httpMethod, requestUri);
-            requestMessage.Content = new StringContent(JsonConvert.SerializeObject(data));
+            if (data != null) requestMessage.Content = new StringContent(JsonConvert.SerializeObject(data));
             HttpResponseMessage authResponse = await httpClient.SendAsync(requestMessage);
 
             // Retrieving JSON from response and parsing it
@@ -79,7 +86,7 @@ namespace KanColleIoService
             dynamic result = await APIRequest(HttpMethod.Post, "auth/login", new { username, password });
 
             // Saving credentials for further authentication
-            httpClient.DefaultRequestHeaders.Authorization = result.data["$oid"];
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue((string) result.data["$oid"]);
             UserName = username;
 
             // Telling the roster to fill itself with ship data
@@ -125,23 +132,23 @@ namespace KanColleIoService
             // Called when ship is constructed
             proxy.api_req_kousyou_getship.TryParse<kcsapi_getship>().Subscribe(data => ApiMessageHandlers.GetShip(roster, data.Data));
         }
+    }
 
-        /// <summary>
-        /// API exception class. This exception is thrown when an error occurs within the API
-        /// and there is an error message provided in the response body.
-        /// </summary>
-        class APIException : Exception
-        {
-            public APIException()
-            { }
+    /// <summary>
+    /// API exception class. This exception is thrown when an error occurs within the API
+    /// and there is an error message provided in the response body.
+    /// </summary>
+    class APIException : Exception
+    {
+        public APIException()
+        { }
 
-            public APIException(string message)
-                : base(message)
-            { }
+        public APIException(string message)
+            : base(message)
+        { }
 
-            public APIException(string message, Exception innerException)
-                : base(message, innerException)
-            { }
-        }
+        public APIException(string message, Exception innerException)
+            : base(message, innerException)
+        { }
     }
 }

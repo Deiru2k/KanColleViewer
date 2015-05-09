@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Net.Http;
 using Grabacr07.KanColleWrapper.Models.Raw;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using KanColleIoService.Models;
 
 namespace KanColleIoService
 {
@@ -19,7 +20,7 @@ namespace KanColleIoService
         /// <summary>
         /// Local ship table.
         /// </summary>
-        private Dictionary<int, object> ships = new Dictionary<int, object>();
+        private Dictionary<int, Ship> ships = new Dictionary<int, Ship>();
 
         private Roster()
         {
@@ -37,8 +38,33 @@ namespace KanColleIoService
         /// <summary>
         /// Initializes the roster with data taken from the API.
         /// </summary>
-        public void Initialize()
+        public async void Initialize()
         {
+            // Constructing an URI link. Note that we're passing the fields that we need in the URI.
+            string requestUri = "http://api.dev.kancolle.io/v1/roster/{0}?fields=id,origin,baseId,level";
+            requestUri = string.Format(requestUri, syncService.UserName);
+
+            try
+            {
+                // Performing a request to the API
+                JToken result = await syncService.APIRequest(HttpMethod.Get, requestUri);
+
+                // Deserializing the JSON response
+                Response<Ship[]> shipListResponse =
+                    (Response<Ship[]>)JsonConvert.DeserializeObject(result.ToString(), typeof(Response<Ship[]>));
+                Ship[] shipList = shipListResponse.data;
+
+                foreach (Ship ship in shipList)
+                {
+                    // We're only adding ships that were added using KCV.
+                    if (ship.origin == "kcv" && ship.id is int)
+                        ships.Add((int) ship.id, ship);
+                }
+            }
+
+            // This should silence the warning that there's no shipgirls in roster
+            catch (APIException)
+            { }
         }
 
         /// <summary>
@@ -55,8 +81,17 @@ namespace KanColleIoService
         /// Adds the ship to the list and performs a corresponding request to the API.
         /// </summary>
         /// <param name="ship">KanColle API ship data</param>
-        public void AddShip(kcsapi_ship2 ship)
+        public async void AddShip(kcsapi_ship2 ship)
         {
+            Ship newShip = new Ship {
+                id = ship.api_id,
+                origin = "kcv",
+                baseId = ship.api_ship_id,
+                level = ship.api_lv
+            };
+
+            ships.Add(ship.api_id, newShip);
+            await syncService.APIRequest(HttpMethod.Post, string.Format("roster/{0}", syncService.UserName), newShip);
         }
 
         /// <summary>
@@ -73,6 +108,8 @@ namespace KanColleIoService
         /// <param name="ship">KanColle API ship data</param>
         public void ProcessShip(kcsapi_ship2 ship)
         {
+            if (ships.ContainsKey(ship.api_id)) UpdateShip(ship);
+            else AddShip(ship);
         }
     }
 }

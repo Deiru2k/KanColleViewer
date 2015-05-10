@@ -1,10 +1,19 @@
 ﻿using System;
+using System.Linq;
 using Grabacr07.KanColleWrapper.Models.Raw;
 
 namespace KanColleIoService
 {
     static class ApiMessageHandlers
     {
+        /// <summary>
+        /// Handles /kcsapi/api_start2
+        /// </summary>
+        public static void Start2(Roster roster, kcsapi_start2 data)
+        {
+            roster.ProcessBaseData(data);
+        }
+
         /// <summary>
         /// Handles /kcsapi/api_port/port
         /// </summary>
@@ -18,11 +27,15 @@ namespace KanColleIoService
         /// </summary>
         public static void Ship2(Roster roster, kcsapi_ship2[] data)
         {
-            // To process means to try updating the existing ship, and if the ship isn't in
-            // list, to add it there.
+            // "To process" means to try updating the existing ship, and if the ship isn't
+            // in the list, to add it there. If there are ships that aren't in kcsapi_ship2 list,
+            // but are present in the roster, they should be deleted from there.
 
             foreach (kcsapi_ship2 ship in data)
                 roster.ProcessShip(ship);
+
+            foreach (int id in roster.GetShipIds().Except(data.Select(x => x.api_id)))
+                roster.RemoveShip(id);
         }
 
         /// <summary>
@@ -30,7 +43,12 @@ namespace KanColleIoService
         /// </summary>
         public static void Ship3(Roster roster, kcsapi_ship3 data)
         {
-            Ship2(roster, data.api_ship_data);
+            // Instead of delegating the handling to Ship2, we're iterating over the list here.
+            // This is because the list of ships in kcsapi_ship3 is partial, and the ships
+            // that aren't in it should not be removed from the roster.
+
+            foreach (kcsapi_ship2 ship in data.api_ship_data)
+                roster.ProcessShip(ship);
         }
 
         /// <summary>
@@ -52,6 +70,7 @@ namespace KanColleIoService
         /// </summary>
         public static void Change(Roster roster, kcsapi_change data)
         {
+            // Not implemented yet in the current version of the API.
         }
 
         /// <summary>

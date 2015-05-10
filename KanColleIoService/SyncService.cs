@@ -5,7 +5,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
-using System.Web;
+using System.Web.Http;
 using Fiddler;
 using Grabacr07.KanColleWrapper;
 using Grabacr07.KanColleWrapper.Models.Raw;
@@ -58,21 +58,36 @@ namespace KanColleIoService
             // Serializing the provided object and performing the request
             HttpRequestMessage requestMessage = new HttpRequestMessage(httpMethod, requestUri);
             if (data != null) requestMessage.Content = new StringContent(JsonConvert.SerializeObject(data));
-            HttpResponseMessage authResponse = await httpClient.SendAsync(requestMessage);
+            HttpResponseMessage responseMessage = await httpClient.SendAsync(requestMessage);
 
-            // Retrieving JSON from response and parsing it
-            string jsonResponse = await authResponse.Content.ReadAsStringAsync();
-            JToken result = JObject.Parse(jsonResponse);
+            // Some requests (i.e. DELETE roster/username/id) return no JSON data
+            if (responseMessage.StatusCode == HttpStatusCode.NoContent) return null;
 
-            // If there are any errors, we throw an API exception
-            if ((string) result.SelectToken("status", true) == "error")
+            try
             {
-                // If there is a message provided in JSON response, an exception is created
-                // with this message as a parameter.
-                throw new APIException((string) result.SelectToken("message", true));
-            }
+                // Retrieving JSON from response and parsing it
+                string jsonResponse = await responseMessage.Content.ReadAsStringAsync();
+                JToken result = JObject.Parse(jsonResponse);
 
-            return result;
+                // If there are any errors, we throw an API exception
+                if ((string)result.SelectToken("status", true) == "error")
+                {
+                    // If there is a message provided in JSON response, an exception is created
+                    // with this message as a parameter.
+                    throw new APIException((string)result.SelectToken("message", true));
+                }
+
+                // We also throw an exception for 4XX and 5XX status codes
+                if (!responseMessage.IsSuccessStatusCode)
+                    throw new HttpResponseException(responseMessage);
+
+                return result;
+            }
+            catch (JsonReaderException)
+            {
+                // In case we can't parse JSON, we ignore the response body completely
+                return null;
+            }
         }
 
         /// <summary>
@@ -108,6 +123,9 @@ namespace KanColleIoService
         /// <param name="proxy">The proxy object</param>
         public void RegisterAPIMessages(KanColleProxy proxy)
         {
+            // Called when game starts
+            proxy.api_start2.TryParse<kcsapi_start2>().Subscribe(data => ApiMessageHandlers.Start2(roster, data.Data));
+
             // Called when player returns to main menu
             proxy.api_port.TryParse<kcsapi_port>().Subscribe(data => ApiMessageHandlers.Port(roster, data.Data));
 
@@ -141,14 +159,17 @@ namespace KanColleIoService
     class APIException : Exception
     {
         public APIException()
-        { }
+        {
+        }
 
         public APIException(string message)
             : base(message)
-        { }
+        {
+        }
 
         public APIException(string message, Exception innerException)
             : base(message, innerException)
-        { }
+        {
+        }
     }
 }

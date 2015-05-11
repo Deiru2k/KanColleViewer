@@ -15,6 +15,16 @@ namespace KanColleIoService
         private SyncService syncService;
 
         /// <summary>
+        /// Global ship table.
+        /// </summary>
+        private Dictionary<int, kcsapi_mst_ship> globalShips = null;
+
+        /// <summary>
+        /// Global item table.
+        /// </summary>
+        private Dictionary<int, kcsapi_mst_slotitem> globalItems = null;
+
+        /// <summary>
         /// Local item table. Each key corresponds to item ID in global item table. 
         /// </summary>
         private Dictionary<int, int> items = new Dictionary<int, int>();
@@ -38,12 +48,51 @@ namespace KanColleIoService
         }
 
         /// <summary>
+        /// Constructs a ship entry.
+        /// </summary>
+        /// <param name="ship">API raw ship data</param>
+        /// <returns>KanColle.io JSON-serializable ship object</returns>
+        public Ship ConstructShip(kcsapi_ship2 ship)
+        {
+            // Translating local equipment IDs to global ones
+            int[] equipment = ship.api_slot.Where(x => x >= 0).Select(x => items[x]).ToArray();
+
+            // Calculating base (without equipment; with modernization) stats of a ship
+            Stats stats = new Stats
+            {
+                hp = ship.api_maxhp,
+                firepower = ship.api_karyoku[0] - equipment.Select(x => globalItems[x].api_houg).Sum(),
+                armor = ship.api_soukou[0] - equipment.Select(x => globalItems[x].api_souk).Sum(),
+                torpedo = ship.api_raisou[0] - equipment.Select(x => globalItems[x].api_raig).Sum(),
+                evasion = ship.api_kaihi[0] - equipment.Select(x => globalItems[x].api_houk).Sum(),
+                aa = ship.api_taiku[0] - equipment.Select(x => globalItems[x].api_tyku).Sum(),
+                aircraft = ship.api_onslot.Sum(),
+                asw = ship.api_taisen[0] - equipment.Select(x => globalItems[x].api_tais).Sum(),
+                // speed
+                los = ship.api_sakuteki[0] - equipment.Select(x => globalItems[x].api_saku).Sum(),
+                // range
+                luck = ship.api_lucky[0] - equipment.Select(x => globalItems[x].api_luck).Sum()
+            };
+
+            // Constructing a new ship
+            return new Ship
+            {
+                id = ship.api_id,
+                origin = "kcv",
+                baseId = ship.api_ship_id,
+                level = ship.api_lv,
+                equipment = equipment,
+                stats = stats
+            };
+        }
+
+        /// <summary>
         /// Initializes the roster with data taken from the API.
         /// </summary>
         public async void Initialize()
         {
             // Constructing an URI link. Note that we're passing the fields that we need in the URI.
-            string requestUri = "http://api.dev.kancolle.io/v1/roster/{0}?fields=id,origin,baseId,level";
+            string requestUri = "roster/{0}?page=all&fields=id,origin,baseId,level,equipment,stats";
             requestUri = string.Format(requestUri, syncService.UserName);
 
             try
@@ -82,8 +131,21 @@ namespace KanColleIoService
             }
         }
 
+        /// <summary>
+        /// Processes the base data sent by KanColle API when the game starts.
+        /// </summary>
+        /// <param name="data">API master data object</param>
         public void ProcessBaseData(kcsapi_start2 data)
         {
+            // Saving ship data (used as reference for static stats, i.e. speed)
+            globalShips = new Dictionary<int, kcsapi_mst_ship>();
+            foreach (kcsapi_mst_ship ship in data.api_mst_ship)
+                globalShips[ship.api_id] = ship;
+
+            // Saving item data (used as reference when calculating modernizable stats)
+            globalItems = new Dictionary<int, kcsapi_mst_slotitem>();
+            foreach (kcsapi_mst_slotitem item in data.api_mst_slotitem)
+                globalItems[item.api_id] = item;
         }
 
         /// <summary>
@@ -111,13 +173,7 @@ namespace KanColleIoService
         /// <param name="ship">KanColle API ship data</param>
         public async void AddShip(kcsapi_ship2 ship)
         {
-            Ship newShip = new Ship
-            {
-                id = ship.api_id,
-                origin = "kcv",
-                baseId = ship.api_ship_id,
-                level = ship.api_lv
-            };
+            Ship newShip = ConstructShip(ship);
 
             try
             {
@@ -142,13 +198,7 @@ namespace KanColleIoService
         /// <param name="ship">KanColle API ship data</param>
         public async void UpdateShip(kcsapi_ship2 ship)
         {
-            Ship newShip = new Ship
-            {
-                id = ship.api_id,
-                origin = "kcv",
-                baseId = ship.api_ship_id,
-                level = ship.api_lv
-            };
+            Ship newShip = ConstructShip(ship);
 
             // The easiest (maybe not the slickest one) way to compare two data objects
             // is to serialize them and compare two resulting JSON strings.

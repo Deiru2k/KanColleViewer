@@ -15,8 +15,8 @@ namespace KanColleIoService.Models
         public string origin { get; set; }
         public int baseId { get; set; }
         public int level { get; set; }
-        //public int[] equipment { get; set; }
-        //public Stats stats { get; set; }
+        public int[] equipment { get; set; }
+        public Stats stats { get; set; }
     }
 
     public class Stats

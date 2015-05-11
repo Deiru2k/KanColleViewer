@@ -98,8 +98,9 @@ namespace KanColleIoService
         /// <summary>
         /// Handles /kcsapi/api_req_kousyou/getship
         /// </summary>
-        public static void GetShip(Roster roster, kcsapi_getship data)
+        public static void GetShip(Roster roster, kcsapi_kdock_getship data)
         {
+            SlotItem(roster, data.api_slotitem);
             roster.AddShip(data.api_ship);
         }
     }

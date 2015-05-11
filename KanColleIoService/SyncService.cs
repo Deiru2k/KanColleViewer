@@ -5,7 +5,6 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
-using System.Web.Http;
 using Fiddler;
 using Grabacr07.KanColleWrapper;
 using Grabacr07.KanColleWrapper.Models.Raw;
@@ -79,7 +78,7 @@ namespace KanColleIoService
 
                 // We also throw an exception for 4XX and 5XX status codes
                 if (!responseMessage.IsSuccessStatusCode)
-                    throw new HttpResponseException(responseMessage);
+                    throw new HttpStatusCodeException(responseMessage.StatusCode);
 
                 return result;
             }
@@ -148,7 +147,7 @@ namespace KanColleIoService
             proxy.api_req_kousyou_createitem.TryParse<kcsapi_createitem>().Subscribe(data => ApiMessageHandlers.CreateItem(roster, data.Data));
 
             // Called when ship is constructed
-            proxy.api_req_kousyou_getship.TryParse<kcsapi_getship>().Subscribe(data => ApiMessageHandlers.GetShip(roster, data.Data));
+            proxy.api_req_kousyou_getship.TryParse<kcsapi_kdock_getship>().Subscribe(data => ApiMessageHandlers.GetShip(roster, data.Data));
         }
     }
 
@@ -156,7 +155,7 @@ namespace KanColleIoService
     /// API exception class. This exception is thrown when an error occurs within the API
     /// and there is an error message provided in the response body.
     /// </summary>
-    class APIException : Exception
+    public class APIException : Exception
     {
         public APIException()
         {
@@ -171,5 +170,22 @@ namespace KanColleIoService
             : base(message, innerException)
         {
         }
+    }
+    
+    /// <summary>
+    /// HTTP status code exception.
+    /// </summary>
+    public class HttpStatusCodeException : Exception
+    {
+        public HttpStatusCodeException(HttpStatusCode httpStatusCode)
+        {
+            StatusCode = httpStatusCode;
+        }
+
+        private HttpStatusCodeException()
+        {
+        }
+
+        public HttpStatusCode StatusCode { get; private set; }
     }
 }

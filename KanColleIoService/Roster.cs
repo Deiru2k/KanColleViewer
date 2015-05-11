@@ -68,9 +68,9 @@ namespace KanColleIoService
                 aa = ship.api_taiku[0] - equipment.Select(x => globalItems[x].api_tyku).Sum(),
                 aircraft = ship.api_onslot.Sum(),
                 asw = ship.api_taisen[0] - equipment.Select(x => globalItems[x].api_tais).Sum(),
-                // speed
+                speed = globalShips[ship.api_ship_id].api_soku > 5 ? "fast" : "slow",
                 los = ship.api_sakuteki[0] - equipment.Select(x => globalItems[x].api_saku).Sum(),
-                // range
+                range = "short;medium;long;very long".Split(';').ElementAtOrDefault(globalShips[ship.api_ship_id].api_leng - 1), 
                 luck = ship.api_lucky[0] - equipment.Select(x => globalItems[x].api_luck).Sum()
             };
 

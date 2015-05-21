@@ -32,10 +32,10 @@ namespace KanColleIoService
             // but are present in the roster, they should be deleted from there.
 
             foreach (kcsapi_ship2 ship in data)
-                roster.ProcessShip(ship);
+                roster.ProcessShip(ship).Wait();
 
             foreach (int id in roster.GetShipIds().Except(data.Select(x => x.api_id)))
-                roster.RemoveShip(id);
+                roster.RemoveShip(id).Wait();
         }
 
         /// <summary>
@@ -48,7 +48,7 @@ namespace KanColleIoService
             // that aren't in it should not be removed from the roster.
 
             foreach (kcsapi_ship2 ship in data.api_ship_data)
-                roster.ProcessShip(ship);
+                roster.ProcessShip(ship).Wait();
         }
 
         /// <summary>
@@ -80,7 +80,7 @@ namespace KanColleIoService
         {
             if (data.api_powerup_flag == 1)
             {
-                roster.UpdateShip(data.api_ship);
+                roster.UpdateShip(data.api_ship).Wait();
             }
         }
 
@@ -101,7 +101,7 @@ namespace KanColleIoService
         public static void GetShip(Roster roster, kcsapi_kdock_getship data)
         {
             SlotItem(roster, data.api_slotitem);
-            roster.AddShip(data.api_ship);
+            roster.AddShip(data.api_ship).Wait();
         }
     }
 }

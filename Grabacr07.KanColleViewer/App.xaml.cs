@@ -47,36 +47,6 @@ namespace Grabacr07.KanColleViewer
 			KanColleClient.Current.Proxy.Startup(AppSettings.Default.LocalProxyPort);
 			KanColleClient.Current.Proxy.UpstreamProxySettings = Settings.Current.ProxySettings;
 
-			// Using reflection to load KanColle.io service
-			Type syncServiceType = null;
-			object syncService = null;
-
-            bool kcioServiceLoadedSuccessfully = false;
-
-			try
-			{
-				// Loading KanColle.io service
-				Assembly kcioService = Assembly.LoadFrom("KanColleIoService.dll");
-
-				// Trying to instanciate and get the SyncService singleton
-				syncServiceType = kcioService.GetType("KanColleIoService.SyncService");
-				syncService = syncServiceType.GetProperty("Current").GetValue(null, null);
-
-				kcioServiceLoadedSuccessfully = true;
-			}
-			catch (Exception ex)
-			{
-				// Silently ignore any loading errors if any, thus allowing KCV to function normally even without the service
-				if (!(ex is FileNotFoundException || ex is NullReferenceException))
-					throw;
-			}
-
-			if (kcioServiceLoadedSuccessfully)
-			{
-				syncServiceType.GetMethod("RegisterAPIMessages").Invoke(syncService, new object[] { KanColleClient.Current.Proxy });
-				//// syncServiceType.GetMethod("AddSettingsTab").Invoke(syncService, ...);
-			}
-
 			ResourceService.Current.ChangeCulture(Settings.Current.Culture);
 			// Initialize translations
 			KanColleClient.Current.Translations.EnableTranslations = Settings.Current.EnableTranslations;
@@ -122,6 +92,36 @@ namespace Grabacr07.KanColleViewer
 					Process.Start("IExplore.exe", @"http://get.adobe.com/flashplayer/");
 					this.MainWindow.Close();
 				}
+			}
+
+			// Using reflection to load KanColle.io service
+			Type syncServiceType = null;
+			object syncService = null;
+
+			bool kcioServiceLoadedSuccessfully = false;
+
+			try
+			{
+				// Loading KanColle.io service
+				Assembly kcioService = Assembly.LoadFrom("KanColleIoService.dll");
+
+				// Trying to instanciate and get the SyncService singleton
+				syncServiceType = kcioService.GetType("KanColleIoService.SyncService");
+				syncService = syncServiceType.GetProperty("Current").GetValue(null, null);
+
+				kcioServiceLoadedSuccessfully = true;
+			}
+			catch (Exception ex)
+			{
+				// Silently ignore any loading errors if any, thus allowing KCV to function normally even without the service
+				if (!(ex is FileNotFoundException || ex is NullReferenceException))
+					throw;
+			}
+
+			if (kcioServiceLoadedSuccessfully)
+			{
+				syncServiceType.GetMethod("RegisterObjects").Invoke(syncService, new object[] {
+					KanColleClient.Current, ViewModelRoot, MainWindow });
 			}
 		}
 

@@ -10,7 +10,7 @@ using Newtonsoft.Json.Linq;
 
 namespace KanColleIoService
 {
-    class Roster
+    internal class Roster
     {
         private SyncService syncService;
 
@@ -89,7 +89,7 @@ namespace KanColleIoService
         /// <summary>
         /// Initializes the roster with data taken from the API.
         /// </summary>
-        public async void Initialize()
+        public async Task Initialize()
         {
             // Constructing an URI link. Note that we're passing the fields that we need in the URI.
             string requestUri = "roster/{0}?page=all&fields=id,origin,baseId,level,equipment,stats";
@@ -126,8 +126,9 @@ namespace KanColleIoService
             }
             
             // This should silence the warning that there are no shipgirls in the roster.
-            catch (APIException)
+            catch (APIException ex)
             {
+                syncService.ReportException(ex);
             }
         }
 
@@ -162,16 +163,16 @@ namespace KanColleIoService
         /// Returns the IDs of all the ships present in the roster.
         /// </summary>
         /// <returns>Enumerable containing IDs of all ships</returns>
-        public IEnumerable<int> GetShipIds()
+        public List<int> GetShipIds()
         {
-            return ships.Keys;
+            return ships.Keys.ToList();
         }
 
         /// <summary>
         /// Adds the ship to the list and performs a corresponding request to the API.
         /// </summary>
         /// <param name="ship">KanColle API ship data</param>
-        public async void AddShip(kcsapi_ship2 ship)
+        public async Task AddShip(kcsapi_ship2 ship)
         {
             Ship newShip = ConstructShip(ship);
 
@@ -189,6 +190,7 @@ namespace KanColleIoService
             {
                 if (!(ex is APIException || ex is JsonException))
                     throw;
+                else syncService.ReportException(ex);
             }
         }
 
@@ -196,7 +198,7 @@ namespace KanColleIoService
         /// Updates the existing ship from the list and performs a corresponding request to the API.
         /// </summary>
         /// <param name="ship">KanColle API ship data</param>
-        public async void UpdateShip(kcsapi_ship2 ship)
+        public async Task UpdateShip(kcsapi_ship2 ship)
         {
             Ship newShip = ConstructShip(ship);
 
@@ -221,6 +223,7 @@ namespace KanColleIoService
                 {
                     if (!(ex is APIException || ex is JsonException))
                         throw;
+                    else syncService.ReportException(ex);
                 } 
             }
         }
@@ -229,17 +232,17 @@ namespace KanColleIoService
         /// For provided ship, chooses what to do with it and performs a corresponding request to the API.
         /// </summary>
         /// <param name="ship">KanColle API ship data</param>
-        public void ProcessShip(kcsapi_ship2 ship)
+        public async Task ProcessShip(kcsapi_ship2 ship)
         {
-            if (ships.ContainsKey(ship.api_id)) UpdateShip(ship);
-            else AddShip(ship);
+            if (ships.ContainsKey(ship.api_id)) await UpdateShip(ship);
+            else await AddShip(ship);
         }
 
         /// <summary>
         /// Removes the ship with provided id and performs a corresponding request to the API.
         /// </summary>
         /// <param name="id">Ship ID</param>
-        public async void RemoveShip(int id)
+        public async Task RemoveShip(int id)
         {
             string requestUri = string.Format("roster/{0}/{1}", syncService.UserName, id);
 
@@ -253,9 +256,19 @@ namespace KanColleIoService
             }
 
             // Ignore any API exceptions
-            catch (APIException)
+            catch (APIException ex)
             {
+                syncService.ReportException(ex);
             }
+        }
+
+        /// <summary>
+        /// Checks if base data was initialized.
+        /// </summary>
+        /// <returns>True if both of the global tables are filled with data</returns>
+        public bool HasBaseData()
+        {
+            return (globalShips != null) && (globalItems != null);
         }
     }
 }

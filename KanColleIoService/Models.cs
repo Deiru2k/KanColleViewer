@@ -2,14 +2,14 @@
 
 namespace KanColleIoService.Models
 {
-    public class Response<T>
+    internal class Response<T>
     {
         public int code { get; set; }
         public string status { get; set; }
         public T data { get; set; }
     }
 
-    public class Ship
+    internal class Ship
     {
         public object id { get; set; }
         public string origin { get; set; }
@@ -19,7 +19,7 @@ namespace KanColleIoService.Models
         public Stats stats { get; set; }
     }
 
-    public class Stats
+    internal class Stats
     {
         public int hp { get; set; }
         public int firepower { get; set; }

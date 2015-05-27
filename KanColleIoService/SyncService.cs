@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using Fiddler;
 using Grabacr07.KanColleViewer.Composition;
 using Grabacr07.KanColleViewer.ViewModels;
@@ -153,13 +151,19 @@ namespace KanColleIoService
         /// <param name="client">Current instance of KanColleClient</param>
         /// <param name="viewModelRoot">Main view model object</param>
         /// <param name="mainWindow">Main window object</param>
-        public async void RegisterObjects(KanColleClient client, MainWindowViewModel viewModelRoot, Window mainWindow)
+        public void RegisterObjects(KanColleClient client, MainWindowViewModel viewModelRoot, Window mainWindow)
         {
             if (this.proxy != null)
                 throw new InvalidOperationException("Proxy has already been registered.");
 
             this.proxy = client.Proxy;
-            // AddSettingsTab(mainWindow);
+
+            // This is probably a "kostyl", as they call it in Russian, but I really couldn't come up with a better way to do this.
+            UserInterfaceHelpers.AddSettingsTabStart(mainWindow);
+            viewModelRoot.CompositeDisposable.Add(new PropertyChangedEventListener(client)
+            {
+                { () => client.IsStarted, (sender, args) => Task.Run(() => UserInterfaceHelpers.AddSettingsTabMain(mainWindow)) }
+            });
 
             // Called when game starts
             proxy.api_start2.TryParse<kcsapi_start2>().Subscribe(CreateHandler<kcsapi_start2>(ApiMessageHandlers.Start2));
@@ -232,15 +236,6 @@ namespace KanColleIoService
                     ReportException(ex);
                 }
             };
-        }
-
-        /// <summary>
-        /// Adds the settings tab to KCV's settings menu.
-        /// </summary>
-        /// <param name="mainWindow">Main window of KCV</param>
-        private void AddSettingsTab(Window mainWindow)
-        {
-            throw new NotImplementedException();
         }
     }
 

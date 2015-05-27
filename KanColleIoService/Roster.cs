@@ -248,8 +248,8 @@ namespace KanColleIoService
 
             try
             {
-                JToken result = await syncService.APIRequest(HttpMethod.Delete, requestUri);
                 ships.Remove(id);
+                await syncService.APIRequest(HttpMethod.Delete, requestUri);
             }
 
             // Ignore any API exceptions

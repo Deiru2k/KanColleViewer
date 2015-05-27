@@ -249,10 +249,7 @@ namespace KanColleIoService
             try
             {
                 JToken result = await syncService.APIRequest(HttpMethod.Delete, requestUri);
-
-                // If there was no errors, "204 No Content" should be returned.
-                if (result == null)
-                    ships.Remove(id);
+                ships.Remove(id);
             }
 
             // Ignore any API exceptions

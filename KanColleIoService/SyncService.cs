@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using Fiddler;
 using Grabacr07.KanColleViewer.Composition;
 using Grabacr07.KanColleViewer.ViewModels;
@@ -157,12 +159,7 @@ namespace KanColleIoService
                 throw new InvalidOperationException("Proxy has already been registered.");
 
             this.proxy = client.Proxy;
-
-            // This is probably a "kostyl", as they call it in Russian, but I really couldn't come up with a better way to do this.
-            viewModelRoot.CompositeDisposable.Add(new PropertyChangedEventListener(client)
-			{
-				{ () => client.IsStarted, (sender, args) => AddSettingsTab(mainWindow) }
-            });
+            // AddSettingsTab(mainWindow);
 
             // Called when game starts
             proxy.api_start2.TryParse<kcsapi_start2>().Subscribe(CreateHandler<kcsapi_start2>(ApiMessageHandlers.Start2));
@@ -181,7 +178,7 @@ namespace KanColleIoService
 
             // Called when ship drops (whole list of ships is sent)
             listeners.Add(proxy.api_get_member_ship2.TryParse<kcsapi_ship2[]>().Subscribe(CreateHandler<kcsapi_ship2[]>(ApiMessageHandlers.Ship2)));
-             
+
             // Called when ship equipment is changed / ship itself is remodelled
             listeners.Add(proxy.api_get_member_ship3.TryParse<kcsapi_ship3>().Subscribe(CreateHandler<kcsapi_ship3>(ApiMessageHandlers.Ship3)));
 
@@ -190,7 +187,7 @@ namespace KanColleIoService
 
             // Called when fleet composition is changed
             listeners.Add(proxy.api_req_hensei_change.TryParse<kcsapi_change>().Subscribe(CreateHandler<kcsapi_change>(ApiMessageHandlers.Change)));
-            
+
             // Called when ship is modernized
             listeners.Add(proxy.api_req_kaisou_powerup.TryParse<kcsapi_powerup>().Subscribe(CreateHandler<kcsapi_powerup>(ApiMessageHandlers.PowerUp)));
 
@@ -243,12 +240,12 @@ namespace KanColleIoService
         /// <param name="mainWindow">Main window of KCV</param>
         private void AddSettingsTab(Window mainWindow)
         {
-            // There should be a way.
+            throw new NotImplementedException();
         }
     }
 
     /// <summary>
-    /// API exception class. This exception is thrown whxden an error occurs within the API
+    /// API exception class. This exception is thrown when an error occurs within the API
     /// and there is an error message provided in the response body.
     /// </summary>
     public class APIException : Exception
